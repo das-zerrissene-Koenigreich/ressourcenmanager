@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Das zerrissene Königreich Ressourcen Manager</title>
+<style>
+body { font-family: Arial; background: #1e1e1e; color: white; text-align: center; }
+.box { background: #2c2c2c; padding: 20px; margin: 10px auto; width: 350px; border-radius: 10px; }
+button { margin: 3px; padding: 8px; border: none; border-radius: 5px; cursor: pointer; }
+input { margin: 3px; padding: 5px; width: 60px; }
+</style>
+</head>
+<body>
+
+<h1>Das zerrissene Königreich - Ressourcen Manager</h1>
+
+<div class="box">
+<h2>Runde: <span id="runde">0</span></h2>
+<button onclick="rundeStart()">Nächste Runde</button>
+</div>
+
+<div class="box">
+<h2>Ressourcen</h2>
+Holz: <span id="holz">0</span><br>
+Getreide: <span id="getreide">0</span><br>
+Metall: <span id="metall">0</span><br>
+Stein: <span id="stein">0</span>
+</div>
+
+<div class="box">
+<h2>Truppen</h2>
+Truppen: <span id="truppen">0</span>/10<br>
+Elite: <span id="elite">0</span>/5<br><br>
+
+Dorf: <input id="truppenDorf" type="number" min="0" value="0" onchange="checkTruppen()"><br>
+Feld: <input id="truppenFeld" type="number" min="0" value="0" onchange="checkTruppen()"><br><br>
+
+<button onclick="unterhaltZahlen()">Unterhalt</button><br><br>
+
+<button onclick="truppeKaufen()">Truppe kaufen</button>
+<button onclick="aufwerten()">Aufrüsten</button>
+<button onclick="truppeVerloren()">Truppe verloren</button>
+</div>
+
+<div class="box">
+<h3>Bauen</h3>
+<button onclick="bauen('saegewerk')">Sägewerk</button>
+<button onclick="bauen('mine')">Mine</button>
+<button onclick="bauen('steinbruch')">Steinbruch</button>
+<button onclick="bauen('dorf')">Dorf</button>
+</div>
+
+<div class="box">
+<h2>Eigene Gebäude</h2>
+Sägewerke: <span id="saegewerke">0</span>/4<br>
+Minen: <span id="minen">0</span>/4<br>
+Steinbrüche: <span id="steinbrueche">0</span>/4<br>
+Dörfer: <span id="doerfer">0</span>/4<br><br>
+
+<button onclick="produktionVerlust('saegewerk')">Sägewerk verloren</button>
+<button onclick="produktionZurueck('saegewerk')">Sägewerk zurück</button><br>
+
+<button onclick="produktionVerlust('mine')">Mine verloren</button>
+<button onclick="produktionZurueck('mine')">Mine zurück</button><br>
+
+<button onclick="produktionVerlust('steinbruch')">Steinbruch verloren</button>
+<button onclick="produktionZurueck('steinbruch')">Steinbruch zurück</button><br>
+
+<button onclick="produktionVerlust('dorf')">Dorf verloren</button>
+<button onclick="produktionZurueck('dorf')">Dorf zurück</button>
+</div>
+
+<div class="box">
+<h2>Eroberte Produktion</h2>
+Sägewerke: <span id="eSaegewerk">0</span>/20 
+<button onclick="addErobert('saegewerk')">+</button>
+<button onclick="subErobert('saegewerk')">-</button><br>
+
+Minen: <span id="eMine">0</span>/20 
+<button onclick="addErobert('mine')">+</button>
+<button onclick="subErobert('mine')">-</button><br>
+
+Steinbrüche: <span id="eStein">0</span>/20 
+<button onclick="addErobert('steinbruch')">+</button>
+<button onclick="subErobert('steinbruch')">-</button><br>
+
+Dörfer: <span id="eDorf">0</span>/20
+<button onclick="addErobert('dorf')">+</button>
+<button onclick="subErobert('dorf')">-</button><br>
+
+Startpunkte: <span id="startpunkte">0</span>/5 
+<button onclick="addStart()">+</button>
+<button onclick="subStart()">-</button>
+</div>
+
+<div class="box">
+<h2>Handel (3:1)</h2>
+
+Von:
+<select id="tradeFrom">
+  <option value="holz">Holz</option>
+  <option value="getreide">Getreide</option>
+  <option value="metall">Metall</option>
+  <option value="stein">Stein</option>
+</select>
+
+Zu:
+<select id="tradeTo">
+  <option value="holz">Holz</option>
+  <option value="getreide">Getreide</option>
+  <option value="metall">Metall</option>
+  <option value="stein">Stein</option>
+</select>
+
+<br><br>
+<button onclick="handeln()">Tauschen (3 → 1)</button>
+</div>
+
+<script>
+
+// Ressourcen
+let holz=0,getreide=0,metall=0,stein=0;
+
+// Gebäude (aktive)
+let saegewerke=0,minen=0,steinbrueche=0,doerfer=0;
+
+// verlorene
+let lost={saegewerk:0,mine:0,steinbruch:0,dorf:0};
+
+// eroberte
+let e={saegewerk:0,mine:0,steinbruch:0,dorf:0};
+
+let startpunkte=0;
+let truppen=0,elite=0;
+let runde=0;
+
+// Anzeige
+function updateAnzeige(){
+holzEl.innerText=holz;
+getreideEl.innerText=getreide;
+metallEl.innerText=metall;
+steinEl.innerText=stein;
+
+saegewerkeEl.innerText=saegewerke;
+minenEl.innerText=minen;
+steinbruecheEl.innerText=steinbrueche;
+doerferEl.innerText=doerfer;
+
+eSaegewerk.innerText=e.saegewerk;
+eMine.innerText=e.mine;
+eStein.innerText=e.steinbruch;
+eDorf.innerText=e.dorf;
+
+startpunkteEl.innerText=startpunkte;
+truppenEl.innerText=truppen;
+eliteEl.innerText=elite;
+rundeEl.innerText=runde;
+
+checkTruppen();
+}
+
+// DOM
+const holzEl=document.getElementById("holz");
+const getreideEl=document.getElementById("getreide");
+const metallEl=document.getElementById("metall");
+const steinEl=document.getElementById("stein");
+
+const saegewerkeEl=document.getElementById("saegewerke");
+const minenEl=document.getElementById("minen");
+const steinbruecheEl=document.getElementById("steinbrueche");
+const doerferEl=document.getElementById("doerfer");
+
+const truppenEl=document.getElementById("truppen");
+const eliteEl=document.getElementById("elite");
+const rundeEl=document.getElementById("runde");
+const startpunkteEl=document.getElementById("startpunkte");
+
+// Hilfsfunktionen
+function getGebaeude(t){
+if(t==="saegewerk") return saegewerke;
+if(t==="mine") return minen;
+if(t==="steinbruch") return steinbrueche;
+if(t==="dorf") return doerfer;
+}
+
+function setGebaeude(t,val){
+if(t==="saegewerk") saegewerke=val;
+if(t==="mine") minen=val;
+if(t==="steinbruch") steinbrueche=val;
+if(t==="dorf") doerfer=val;
+}
+
+// NEU: Gesamt (aktiv + verloren)
+function getGesamt(t){
+return getGebaeude(t) + lost[t];
+}
+
+// Runde
+function rundeStart(){
+runde++;
+holz += 2 + (saegewerke + e.saegewerk + startpunkte)*2;
+metall += 2 + (minen + e.mine + startpunkte)*2;
+stein += 2 + (steinbrueche + e.steinbruch + startpunkte)*2;
+getreide += 3 + (doerfer + e.dorf + startpunkte)*5;
+
+updateAnzeige();
+}
+
+// VERLUST (zieht aktive ab, erhöht lost)
+function produktionVerlust(t){
+let aktiv = getGebaeude(t);
+if(aktiv > 0){
+setGebaeude(t, aktiv - 1);
+lost[t]++;
+}
+updateAnzeige();
+}
+
+// ZURÜCK (stellt wieder her)
+function produktionZurueck(t){
+if(lost[t] > 0){
+lost[t]--;
+setGebaeude(t, getGebaeude(t)+1);
+}
+updateAnzeige();
+}
+
+// erobert
+function addErobert(t){ if(e[t]<20)e[t]++; updateAnzeige(); }
+function subErobert(t){ if(e[t]>0)e[t]--; updateAnzeige(); }
+
+// startpunkte
+function addStart(){ if(startpunkte<5) startpunkte++; updateAnzeige(); }
+function subStart(){ if(startpunkte>0) startpunkte--; updateAnzeige(); }
+
+// bauen → nutzt GESAMT!
+function bauen(t){
+
+let c={
+saegewerk:{g:1,h:1,m:2,s:2},
+mine:{g:1,h:5,m:3,s:0},
+steinbruch:{g:1,h:3,m:4,s:0},
+dorf:{g:2,h:4,m:2,s:5}
+};
+
+//  HIER IST DER FIX
+if(getGesamt(t) >= 4) return alert("Maximal 4 Gebäude!");
+
+let k=c[t];
+
+if(holz>=k.h&&getreide>=k.g&&metall>=k.m&&stein>=k.s){
+holz-=k.h;
+getreide-=k.g;
+metall-=k.m;
+stein-=k.s;
+
+setGebaeude(t, getGebaeude(t)+1);
+} else {
+    alert("Nicht genug Ressourcen!");
+  }
+
+updateAnzeige();
+
+}
+
+// Truppen
+function truppeKaufen(){
+if (truppen >= 10) return alert("Maximale Truppen erreicht!");
+if(truppen>=10)return;
+if(holz>=2&&metall>=2&&getreide>=3){
+holz-=2;metall-=2;getreide-=3;truppen++;
+} else {
+    alert("Nicht genug Ressourcen!");
+  }
+updateAnzeige();
+}
+
+// FIX: keine negativen Werte möglich
+function checkTruppen(){
+let d=Math.max(0, +truppenDorf.value||0);
+let f=Math.max(0, +truppenFeld.value||0);
+
+if(d+f>truppen){
+if(document.activeElement.id==="truppenDorf") d=truppen-f;
+else f=truppen-d;
+}
+
+truppenDorf.value=d;
+truppenFeld.value=f;
+
+truppenDorf.max=truppen-f;
+truppenFeld.max=truppen-d;
+}
+
+function unterhaltZahlen(){
+let d = Math.max(0, +truppenDorf.value || 0);
+let f = Math.max(0, +truppenFeld.value || 0);
+
+// Kosten berechnen
+let kosten = d*1 + f*2;
+
+if (getreide >= kosten) {
+  getreide -= kosten;
+} else {
+
+  let fehlend = kosten - getreide;
+  getreide = 0;
+
+  // Truppen sterben lassen (teure zuerst = Feldtruppen)
+  while(fehlend > 0 && (f > 0 || d > 0)){
+
+    if(f > 0){
+      f--;
+      truppen--;
+      fehlend -= 2;
+    } 
+    else if(d > 0){
+      d--;
+      truppen--;
+      fehlend -= 1;
+    }
+  }
+
+  alert("Nicht genug Getreide! Truppen sind verhungert!");
+}
+
+// Werte zurück in Inputs schreiben
+truppenDorf.value = Math.max(0, d);
+truppenFeld.value = Math.max(0, f);
+
+updateAnzeige();
+}
+
+function aufwerten(){
+if (elite >= 5) return alert("Maximale Elite erreicht!");
+if (truppen <= elite) return alert("Keine freie Truppe!");
+
+if(elite>=5||truppen<=elite)return;
+
+if(holz>=10&&metall>=10&&getreide>=10&&stein>=10){
+holz-=10;metall-=10;getreide-=10;stein-=10;
+elite++;
+} else {
+    alert("Nicht genug Ressourcen!");
+  }
+
+updateAnzeige();
+}
+
+function truppeVerloren(){
+if(truppen > 0){
+  truppen--;
+
+  // auch aus Dorf/Feld entfernen (priorität: Feld zuerst)
+  let d = Math.max(0, +truppenDorf.value || 0);
+  let f = Math.max(0, +truppenFeld.value || 0);
+
+  if(f > 0){
+    f--;
+  } else if(d > 0){
+    d--;
+  }
+
+  truppenDorf.value = d;
+  truppenFeld.value = f;
+}
+
+updateAnzeige();
+}
+
+//handeln
+function handeln(){
+  let from = document.getElementById("tradeFrom").value;
+  let to = document.getElementById("tradeTo").value;
+
+  // gleiche Ressource verhindern
+  if(from === to){
+    alert("Du kannst nicht die gleiche Ressource tauschen!");
+    return;
+  }
+
+  // Zugriff auf Variable per Name
+  let res = {
+    holz: holz,
+    getreide: getreide,
+    metall: metall,
+    stein: stein
+  };
+
+  // genug Ressourcen?
+  if(res[from] < 3){
+    alert("Nicht genug Ressourcen für den Handel!");
+    return;
+  }
+
+  // abziehen
+  res[from] -= 3;
+
+  // hinzufügen
+  res[to] += 1;
+
+  // zurückschreiben
+  holz = res.holz;
+  getreide = res.getreide;
+  metall = res.metall;
+  stein = res.stein;
+
+  updateAnzeige();
+}
+
+updateAnzeige();
+
+</script>
+
+<div style="margin-top: 30px; font-size: 12px; color: #aaa;">
+  © Ein zerrissenes Königreich - Alle Rechte vorbehalten (2026)
+</div>
+
+</body>
+</html>
